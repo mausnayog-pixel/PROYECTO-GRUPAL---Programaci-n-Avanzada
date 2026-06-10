@@ -1,4 +1,4 @@
-# 🪙 Crypto Portfolio Dashboard
+# 🪙 Crypto Portafolio Dashboard
 
 Dashboard interactivo para el análisis de precios históricos de criptomonedas 
 y optimización de portafolio de mínima varianza (Teoría de Markowitz).
