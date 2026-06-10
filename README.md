@@ -4,11 +4,11 @@ Dashboard interactivo para el análisis de precios históricos de criptomonedas
 y optimización de portafolio de mínima varianza (Teoría de Markowitz).
 
 Desarrollado como **Entrega Parcial** del curso
-*Programación Avanzada para la Ciencia de Datos* — UP 2026.
+*Programación Avanzada para la Ciencia de Datos* - UP 2026.
 
 ---
 
-## 📁 Estructura del repositorio
+## Estructura del repositorio
 
 ```
 ProyectoProgramación/
@@ -26,7 +26,7 @@ ProyectoProgramación/
 
 ---
 
-## 🗂️ Dataset
+## Dataset
 
 | Campo       | Tipo    | Descripción                              |
 |-------------|---------|------------------------------------------|
@@ -48,7 +48,7 @@ ProyectoProgramación/
 
 ---
 
-## 🚀 Cómo ejecutar localmente
+##  Cómo ejecutar localmente
 
 ### 1. Clonar el repositorio
 ```bash
@@ -85,9 +85,9 @@ La app se abrirá automáticamente en **http://localhost:8501**
 
 ---
 
-## 🖥️ Funcionalidades del dashboard
+##  Funcionalidades del dashboard
 
-### Pestaña 📈 Precios & Mercado
+### Pestaña Precios & Mercado
 - KPIs por moneda (precio medio, retorno total, volatilidad)
 - Evolución de precios con opción de escala logarítmica
 - Velas japonesas (OHLC) por moneda
@@ -95,14 +95,14 @@ La app se abrirá automáticamente en **http://localhost:8501**
 - Volatilidad anual comparativa
 - Distribución de retornos diarios
 
-### Pestaña 🏦 Portafolio Óptimo
+### Pestaña Portafolio Óptimo
 - Portafolio de mínima varianza (Markowitz)
 - KPIs: volatilidad, retorno esperado y Sharpe ratio
 - Pie chart con pesos óptimos por moneda
 - Frontera eficiente con punto óptimo marcado
 - Tabla de pesos por moneda
 
-### Pestaña 📋 Datos
+### Pestaña Datos
 - Métricas descriptivas completas por moneda
 - Tabla de datos filtrable por moneda y rango de fechas
 
@@ -117,7 +117,7 @@ La app se abrirá automáticamente en **http://localhost:8501**
 
 ---
 
-## 👥 Equipo
+## Equipo
 
 | Nombre | Correo |
 |--------|--------|
@@ -132,7 +132,7 @@ La app se abrirá automáticamente en **http://localhost:8501**
 
 ---
 
-## 🤖 Uso de IA
+## Uso de IA
 
 Este proyecto utilizó **Claude (Anthropic, claude-sonnet-4-6)** para:
 - Scaffolding inicial de los módulos `processing.py`, `viz.py` y `app.py`
