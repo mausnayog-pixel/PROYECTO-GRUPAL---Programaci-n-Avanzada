@@ -12,10 +12,21 @@ Licencia           : CC0 — Public Domain
 import pandas as pd
 import numpy as np
 from scipy.optimize import minimize
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+import json
+import time
 
 # ── Constantes ────────────────────────────────────────────────────────────────
 TOP5_DEFAULT = ["Bitcoin", "Ethereum", "Litecoin", "Dash", "Monero"]
 COLUMNAS_REQUERIDAS = {"name", "date", "open", "high", "low", "close", "volume", "market"}
+COINGECKO_IDS = {
+    "Bitcoin": "bitcoin",
+    "Ethereum": "ethereum",
+    "Litecoin": "litecoin",
+    "Dash": "dash",
+    "Monero": "monero",
+}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -185,9 +196,13 @@ def _volatilidad_portafolio(pesos: np.ndarray,
     return float(np.sqrt(pesos @ cov_anual @ pesos))
 
 
-def optimizar_portafolio(retornos: pd.DataFrame) -> dict:
+def optimizar_portafolio(
+    retornos: pd.DataFrame,
+    tasa_libre_riesgo: float = 0.0,
+    perfil_riesgo: str = "Conservador",
+) -> dict:
     """
-    Calcula el portafolio de mínima varianza usando scipy.optimize.minimize
+    Calcula un portafolio óptimo usando scipy.optimize.minimize
     con restricciones: suma de pesos = 1, pesos en [0, 1] (sin posiciones cortas).
 
     Parámetros
@@ -200,7 +215,7 @@ def optimizar_portafolio(retornos: pd.DataFrame) -> dict:
         pesos        — dict {moneda: peso_optimo}
         volatilidad  — volatilidad anual del portafolio óptimo (%)
         retorno      — retorno anual esperado del portafolio (%)
-        sharpe       — Sharpe ratio (tasa libre de riesgo = 0)
+        sharpe       — Sharpe ratio con tasa libre de riesgo anual
         frontera     — lista de puntos (volatilidad, retorno) de la frontera eficiente
     """
     n = len(retornos.columns)
@@ -215,10 +230,29 @@ def optimizar_portafolio(retornos: pd.DataFrame) -> dict:
     limites = tuple((0.0, 1.0) for _ in range(n))
     w0 = np.ones(n) / n   # punto de inicio: pesos iguales
 
+    def _retorno_portafolio(pesos: np.ndarray) -> float:
+        return float(pesos @ ret_anual)
+
+    def _sharpe_negativo(pesos: np.ndarray) -> float:
+        vol = _volatilidad_portafolio(pesos, cov_anual) * 100
+        ret = _retorno_portafolio(pesos) * 100
+        return -((ret - tasa_libre_riesgo) / vol) if vol > 0 else 0.0
+
+    perfil = perfil_riesgo.lower()
+    if perfil == "balanceado":
+        objetivo = _sharpe_negativo
+        args_objetivo = ()
+    elif perfil == "agresivo":
+        objetivo = lambda w: -_retorno_portafolio(w)
+        args_objetivo = ()
+    else:
+        objetivo = _volatilidad_portafolio
+        args_objetivo = (cov_anual,)
+
     resultado = minimize(
-        _volatilidad_portafolio,
+        objetivo,
         w0,
-        args=(cov_anual,),
+        args=args_objetivo,
         method="SLSQP",
         bounds=limites,
         constraints=restricciones,
@@ -228,7 +262,7 @@ def optimizar_portafolio(retornos: pd.DataFrame) -> dict:
     pesos_opt = resultado.x
     vol_opt   = _volatilidad_portafolio(pesos_opt, cov_anual) * 100
     ret_opt   = float(pesos_opt @ ret_anual) * 100
-    sharpe    = ret_opt / vol_opt if vol_opt > 0 else 0.0
+    sharpe    = (ret_opt - tasa_libre_riesgo) / vol_opt if vol_opt > 0 else 0.0
 
     # ── Frontera eficiente ────────────────────────────────────────────────────
     # Barremos retornos objetivo entre el mínimo y el máximo posible
@@ -262,4 +296,107 @@ def optimizar_portafolio(retornos: pd.DataFrame) -> dict:
         "retorno":     round(ret_opt, 4),
         "sharpe":      round(sharpe, 4),
         "frontera":    puntos_frontera,
+        "perfil":      perfil_riesgo,
     }
+
+
+def _coingecko_get(path: str, params: dict) -> dict | list:
+    """Consulta simple a la API publica de CoinGecko."""
+    url = f"https://api.coingecko.com/api/v3/{path}?{urlencode(params)}"
+    request = Request(
+        url,
+        headers={
+            "accept": "application/json",
+            "user-agent": "crypto-portfolio-dashboard/1.0",
+        },
+    )
+    with urlopen(request, timeout=20) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def obtener_precios_coingecko(monedas: list[str]) -> pd.DataFrame:
+    """
+    Obtiene precio, variacion 24h, volumen y market cap actual desde CoinGecko.
+    """
+    ids = [COINGECKO_IDS[m] for m in monedas if m in COINGECKO_IDS]
+    if not ids:
+        return pd.DataFrame()
+
+    data = _coingecko_get(
+        "simple/price",
+        {
+            "ids": ",".join(ids),
+            "vs_currencies": "usd",
+            "include_market_cap": "true",
+            "include_24hr_vol": "true",
+            "include_24hr_change": "true",
+            "include_last_updated_at": "true",
+        },
+    )
+
+    id_to_name = {v: k for k, v in COINGECKO_IDS.items()}
+    rows = []
+    for coin_id, values in data.items():
+        rows.append({
+            "name": id_to_name.get(coin_id, coin_id.title()),
+            "price": values.get("usd"),
+            "market_cap": values.get("usd_market_cap"),
+            "volume_24h": values.get("usd_24h_vol"),
+            "change_24h": values.get("usd_24h_change"),
+            "last_updated": pd.to_datetime(values.get("last_updated_at"), unit="s", utc=True),
+        })
+    return pd.DataFrame(rows)
+
+
+def obtener_market_chart_coingecko(monedas: list[str], dias: int = 30) -> pd.DataFrame:
+    """
+    Descarga precios historicos recientes de CoinGecko para modo live.
+    """
+    frames = []
+    for moneda in monedas:
+        coin_id = COINGECKO_IDS.get(moneda)
+        if not coin_id:
+            continue
+        if frames:
+            time.sleep(1.1)
+        data = _coingecko_get(
+            f"coins/{coin_id}/market_chart",
+            {"vs_currency": "usd", "days": dias, "interval": "daily"},
+        )
+        market_caps = dict(data.get("market_caps", []))
+        volumes = dict(data.get("total_volumes", []))
+        rows = []
+        for ts, price in data.get("prices", []):
+            rows.append({
+                "name": moneda,
+                "date": pd.to_datetime(ts, unit="ms", utc=True).tz_convert(None),
+                "close": price,
+                "open": price,
+                "high": price,
+                "low": price,
+                "volume": volumes.get(ts, np.nan),
+                "market": market_caps.get(ts, np.nan),
+            })
+        frames.append(pd.DataFrame(rows))
+
+    if not frames:
+        return pd.DataFrame(columns=["name", "date", "open", "high", "low", "close", "volume", "market"])
+    return pd.concat(frames, ignore_index=True).dropna(subset=["date", "close"])
+
+
+def calcular_backtest_portafolio(df: pd.DataFrame, pesos: dict, inversion_inicial: float = 1000.0) -> pd.DataFrame:
+    """
+    Simula el valor acumulado de un portafolio buy-and-hold con pesos dados.
+    """
+    precios = df.pivot_table(index="date", columns="name", values="close").sort_index()
+    monedas = [m for m in pesos if m in precios.columns]
+    precios = precios[monedas].dropna()
+    if precios.empty:
+        return pd.DataFrame()
+
+    normalizado = precios / precios.iloc[0]
+    ponderaciones = pd.Series({m: pesos[m] for m in monedas})
+    valor_portafolio = normalizado.mul(ponderaciones, axis=1).sum(axis=1) * inversion_inicial
+    resultado = normalizado * inversion_inicial
+    resultado["Portafolio optimo"] = valor_portafolio
+    return resultado.reset_index().melt(id_vars="date", var_name="Serie", value_name="Valor")

@@ -12,21 +12,21 @@ import numpy as np
 
 # ── Paleta de colores por moneda ──────────────────────────────────────────────
 COLORES_MONEDA = {
-    "Bitcoin":  "#F7931A",
-    "Ethereum": "#627EEA",
-    "Litecoin": "#BFBBBB",
-    "Dash":     "#008CE7",
-    "Monero":   "#FF6600",
+    "Bitcoin":  "#FF4D1C",
+    "Ethereum": "#FF8A3D",
+    "Litecoin": "#F7F2EC",
+    "Dash":     "#38D6FF",
+    "Monero":   "#FFB36C",
 }
 
-COLOR_FONDO   = "#0F0F1A"
-COLOR_PANEL   = "#1A1A2E"
-COLOR_ACENTO  = "#E94560"
-COLOR_TEXTO   = "#E0E0E0"
-COLOR_GRID    = "#2A2A3E"
+COLOR_FONDO   = "#030303"
+COLOR_PANEL   = "#111111"
+COLOR_ACENTO  = "#FF4D1C"
+COLOR_TEXTO   = "#F7F2EC"
+COLOR_GRID    = "rgba(255,255,255,0.09)"
 
 LAYOUT_BASE = dict(
-    font=dict(family="IBM Plex Sans, sans-serif", color=COLOR_TEXTO, size=12),
+    font=dict(family="Instrument Sans, sans-serif", color=COLOR_TEXTO, size=12),
     plot_bgcolor=COLOR_PANEL,
     paper_bgcolor=COLOR_PANEL,
     margin=dict(l=20, r=20, t=45, b=30),
@@ -35,9 +35,26 @@ LAYOUT_BASE = dict(
         bordercolor=COLOR_GRID,
         borderwidth=1,
         font_size=11,
+        orientation="h",
+        yanchor="bottom",
+        y=1.02,
+        xanchor="right",
+        x=1,
     ),
-    xaxis=dict(gridcolor=COLOR_GRID, zerolinecolor=COLOR_GRID),
-    yaxis=dict(gridcolor=COLOR_GRID, zerolinecolor=COLOR_GRID),
+    xaxis=dict(
+        gridcolor=COLOR_GRID,
+        zerolinecolor=COLOR_GRID,
+        linecolor="rgba(255,255,255,0.12)",
+        tickfont=dict(color="#B8B0A8"),
+        title_font=dict(color="#B8B0A8"),
+    ),
+    yaxis=dict(
+        gridcolor=COLOR_GRID,
+        zerolinecolor=COLOR_GRID,
+        linecolor="rgba(255,255,255,0.12)",
+        tickfont=dict(color="#B8B0A8"),
+        title_font=dict(color="#B8B0A8"),
+    ),
 )
 
 
@@ -71,7 +88,7 @@ def grafico_precio_tiempo(df: pd.DataFrame,
             y=sub["close"],
             name=moneda,
             mode="lines",
-            line=dict(color=_color(moneda), width=2),
+            line=dict(color=_color(moneda), width=2.7, shape="spline", smoothing=0.8),
             hovertemplate=(
                 f"<b>{moneda}</b><br>"
                 "Fecha: %{x|%d %b %Y}<br>"
@@ -112,7 +129,7 @@ def grafico_velas(df: pd.DataFrame, moneda: str) -> go.Figure:
         high=sub["high"],
         low=sub["low"],
         close=sub["close"],
-        increasing_line_color="#26A69A",
+        increasing_line_color="#2CE59B",
         decreasing_line_color=COLOR_ACENTO,
         name=moneda,
     ))
@@ -147,7 +164,7 @@ def grafico_volumen(df: pd.DataFrame, moneda: str) -> go.Figure:
         x=sub["date"],
         y=sub["volume"],
         marker_color=_color(moneda),
-        opacity=0.75,
+        opacity=0.82,
         name="Volumen",
         hovertemplate="Fecha: %{x|%d %b %Y}<br>Volumen: $%{y:,.0f}<extra></extra>",
     ))
@@ -293,7 +310,8 @@ def grafico_pesos_portafolio(pesos: dict) -> go.Figure:
 
 def grafico_frontera_eficiente(frontera: list[dict],
                                 vol_opt: float,
-                                ret_opt: float) -> go.Figure:
+                                ret_opt: float,
+                                nombre_punto: str = "Portafolio optimo") -> go.Figure:
     """
     Curva de la frontera eficiente con el punto de mínima varianza marcado.
 
@@ -313,7 +331,7 @@ def grafico_frontera_eficiente(frontera: list[dict],
         x=vols,
         y=rets,
         mode="lines",
-        line=dict(color="#627EEA", width=2.5),
+        line=dict(color="#FF8A3D", width=3, shape="spline", smoothing=0.7),
         name="Frontera Eficiente",
         hovertemplate="Volatilidad: %{x:.2f}%<br>Retorno: %{y:.2f}%<extra></extra>",
     ))
@@ -323,11 +341,11 @@ def grafico_frontera_eficiente(frontera: list[dict],
         x=[vol_opt],
         y=[ret_opt],
         mode="markers",
-        marker=dict(color=COLOR_ACENTO, size=14, symbol="star",
+        marker=dict(color=COLOR_ACENTO, size=15, symbol="star",
                     line=dict(color="white", width=1.5)),
-        name="Mínima Varianza",
+        name=nombre_punto,
         hovertemplate=(
-            f"<b>Portafolio Óptimo</b><br>"
+            f"<b>{nombre_punto}</b><br>"
             f"Volatilidad: {vol_opt:.2f}%<br>"
             f"Retorno: {ret_opt:.2f}%<extra></extra>"
         ),
@@ -341,5 +359,92 @@ def grafico_frontera_eficiente(frontera: list[dict],
         xaxis_ticksuffix="%",
         yaxis_ticksuffix="%",
         height=400,
+    )
+    return fig
+
+
+def grafico_live_precios(df_live: pd.DataFrame, monedas: list[str]) -> go.Figure:
+    """
+    Lineas de precios recientes descargados de CoinGecko.
+    """
+    fig = go.Figure()
+    for moneda in monedas:
+        sub = df_live[df_live["name"] == moneda].sort_values("date")
+        if sub.empty:
+            continue
+        fig.add_trace(go.Scatter(
+            x=sub["date"],
+            y=sub["close"],
+            name=moneda,
+            mode="lines",
+            line=dict(color=_color(moneda), width=2.8, shape="spline", smoothing=0.7),
+            hovertemplate=f"<b>{moneda}</b><br>%{{x|%d %b %Y}}<br>$%{{y:,.2f}}<extra></extra>",
+        ))
+
+    fig.update_layout(
+        **LAYOUT_BASE,
+        title=dict(text="Precios recientes via CoinGecko", font_size=14),
+        xaxis_title="Fecha",
+        yaxis_title="Precio (USD)",
+        height=420,
+        hovermode="x unified",
+    )
+    return fig
+
+
+def grafico_correlacion(retornos: pd.DataFrame) -> go.Figure:
+    """
+    Heatmap de correlacion entre retornos diarios.
+    """
+    corr = retornos.corr()
+    fig = go.Figure(go.Heatmap(
+        z=corr.values,
+        x=corr.columns,
+        y=corr.index,
+        zmin=-1,
+        zmax=1,
+        colorscale=[
+            [0.0, "#38D6FF"],
+            [0.5, "#111111"],
+            [1.0, "#FF5A1F"],
+        ],
+        text=np.round(corr.values, 2),
+        texttemplate="%{text}",
+        hovertemplate="%{y} vs %{x}<br>Correlacion: %{z:.2f}<extra></extra>",
+        colorbar=dict(title="Corr"),
+    ))
+    fig.update_layout(
+        **LAYOUT_BASE,
+        title=dict(text="Correlacion de retornos diarios", font_size=14),
+        height=420,
+    )
+    return fig
+
+
+def grafico_backtest(df_backtest: pd.DataFrame) -> go.Figure:
+    """
+    Curva de valor acumulado del portafolio y monedas individuales.
+    """
+    fig = go.Figure()
+    for serie in df_backtest["Serie"].unique():
+        sub = df_backtest[df_backtest["Serie"] == serie]
+        color = COLOR_ACENTO if serie == "Portafolio optimo" else _color(serie)
+        width = 3.2 if serie == "Portafolio optimo" else 1.8
+        fig.add_trace(go.Scatter(
+            x=sub["date"],
+            y=sub["Valor"],
+            name=serie,
+            mode="lines",
+            line=dict(color=color, width=width, shape="spline", smoothing=0.55),
+            hovertemplate=f"<b>{serie}</b><br>%{{x|%d %b %Y}}<br>$%{{y:,.2f}}<extra></extra>",
+        ))
+
+    fig.update_layout(
+        **LAYOUT_BASE,
+        title=dict(text="Backtesting: inversion inicial simulada", font_size=14),
+        xaxis_title="Fecha",
+        yaxis_title="Valor acumulado (USD)",
+        height=420,
+        hovermode="x unified",
     )
     return fig
