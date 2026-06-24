@@ -21,6 +21,7 @@ ProyectoProgramación/
 │   └── viz.py                   # Funciones de graficación (Plotly)
 ├── docs/
 │   └── parcial.pdf              # Documento de entrega parcial
+|   └── final.pdf  
 ├── requirements.txt             # Dependencias del proyecto
 └── README.md
 ```
