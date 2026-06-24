@@ -14,7 +14,7 @@ Desarrollado como **Entrega Parcial** del curso
 ```
 ProyectoProgramación/
 ├── data/
-│   └── crypto-markets.csv       # Dataset histórico de criptomonedas
+│   └── crypto-markets.zip       # Dataset histórico de criptomonedas
 ├── src/
 │   ├── app.py                   # Entrada principal de Streamlit
 │   ├── processing.py            # Carga, limpieza, métricas y optimización
