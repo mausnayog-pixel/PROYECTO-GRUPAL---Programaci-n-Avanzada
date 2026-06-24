@@ -19,10 +19,12 @@ from processing import (
     calcular_metricas,
     calcular_retornos,
     optimizar_portafolio,
-    obtener_precios_coingecko,
-    obtener_market_chart_coingecko,
     calcular_backtest_portafolio,
     TOP5_DEFAULT,
+)
+from api_or_scraper import (
+    obtener_precios_coingecko,
+    obtener_market_chart_coingecko,
 )
 from viz import (
     grafico_precio_tiempo,
