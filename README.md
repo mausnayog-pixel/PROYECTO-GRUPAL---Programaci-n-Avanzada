@@ -17,8 +17,9 @@ ProyectoProgramación/
 │   └── crypto-markets.zip       # Dataset histórico de criptomonedas
 ├── src/
 │   ├── app.py                   # Entrada principal de Streamlit
-│   ├── processing.py            # Carga, limpieza, métricas, optimización, api
+│   ├── processing.py            # Carga, limpieza, métricas, optimización
 │   └── viz.py                   # Funciones de graficación (Plotly)
+|   └── api_or_screaper.py
 ├── docs/
 │   └── parcial.pdf              # Documento de entrega parcial
 |   └── final.pdf  
